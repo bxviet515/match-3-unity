@@ -41,6 +41,7 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
         }
     }
 
+
     // Init will replace the funtionality of Awake()
-    protected virtual void Init(){}
+    protected virtual void Init() { }
 }
