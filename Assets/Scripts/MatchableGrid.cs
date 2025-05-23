@@ -29,7 +29,10 @@ public class MatchableGrid : GridSystem<Matchable>
 
                 // activate the matchable
                 newMatchable.gameObject.SetActive(true);
-                Debug.Log("x: " + x + ", y: " + y);
+
+                // tell this matchable where it is on the grid
+                newMatchable.position = new Vector2Int(x, y);
+
                 // place the matchable in the grid
                 PutItemAt(newMatchable, x, y);
                 int type = newMatchable.Type;

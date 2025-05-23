@@ -5,6 +5,7 @@ using UnityEngine;
 public class Matchable : Movable
 {
     private int type;
+    private Cursor cursor;
     public int Type
     {
         get
@@ -13,7 +14,11 @@ public class Matchable : Movable
         }
     }
     private SpriteRenderer spriteRenderer;
-    private void Awake() {
+    // where is this matchable in the grid?
+    public Vector2Int position;
+    private void Awake()
+    {
+        cursor = Cursor.Instance;
         spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
@@ -23,6 +28,20 @@ public class Matchable : Movable
         spriteRenderer.sprite = sprite;
         spriteRenderer.color = color;
     }
+    private void OnMouseDown()
+    {
+        cursor.SelectFirst(this);
+    }
+
+    private void OnMouseUp()
+    {
+        cursor.SelectFirst(null);
+    }
+    private void OnMouseEnter()
+    {
+        cursor.SelectSecond(this);
+    }
+
     public override string ToString()
     {
         return gameObject.name;
