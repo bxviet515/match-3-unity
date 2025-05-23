@@ -27,7 +27,7 @@ public abstract class GridSystem<T> : Singleton<GridSystem<T>>
         this.dimensions = dimensions;
         data = new T[dimensions.x, dimensions.y];
         isReady = true;
-        Debug.Log("x: "+dimensions.x+" y:"+dimensions.y);
+        
     }
 
     // clear the entire grid
