@@ -13,8 +13,11 @@ public class MatchableGrid : GridSystem<Matchable>
         pool = (MatchablePool)MatchablePool.Instance;
         score = ScoreManager.Instance;
     }
-    public IEnumerator PopulateGrid(bool allowMatches = false)
+
+    public IEnumerator PopulateGrid(bool allowMatches = false, bool initialPopulation = false)
     {
+        // list of new matchables addes during population
+        List<Matchable> newMatchables = new List<Matchable>();
         Matchable newMatchable;
         Vector3 onScreenPosition;
 
@@ -26,10 +29,8 @@ public class MatchableGrid : GridSystem<Matchable>
                     // get a matchable from the pool
                     newMatchable = pool.GetRandomMatchable();
 
-                    // position the matchable on screen
-                    //newMatchable.transform.position = transform.position + new Vector3(x, y);
-                    onScreenPosition = transform.position + new Vector3(x, y);
-                    newMatchable.transform.position = onScreenPosition + offScreenOffset;
+                    
+                    newMatchable.transform.position = transform.position + new Vector3(x, y) + offScreenOffset;
 
                     // activate the matchable
                     newMatchable.gameObject.SetActive(true);
@@ -39,6 +40,10 @@ public class MatchableGrid : GridSystem<Matchable>
 
                     // place the matchable in the grid
                     PutItemAt(newMatchable, x, y);
+
+                    // add the new matchable to the list
+                    newMatchables.Add(newMatchable);
+
                     int type = newMatchable.Type;
                     while (!allowMatches && IsPartOfAMatch(newMatchable))
                     {
@@ -51,10 +56,22 @@ public class MatchableGrid : GridSystem<Matchable>
                         }
 
                     }
-                    // move the matchable to its on screen position
-                    StartCoroutine(newMatchable.MoveToPosition(onScreenPosition));
                     yield return new WaitForSeconds(0.1f);
                 }
+        }
+        for (int i = 0; i != newMatchables.Count; ++i)
+        {
+            // position the matchable on screen
+            onScreenPosition = transform.position + new Vector3(newMatchables[i].position.x, newMatchables[i].position.y);
+            // move the matchable to its on screen position
+            if (i == newMatchables.Count - 1)
+            {
+                yield return StartCoroutine(newMatchables[i].MoveToPosition(onScreenPosition));
+            }
+            else
+                StartCoroutine(newMatchables[i].MoveToPosition(onScreenPosition));
+            if (initialPopulation)
+                yield return new WaitForSeconds(0.1f);
         }
     }
 
@@ -123,12 +140,31 @@ public class MatchableGrid : GridSystem<Matchable>
 
         // if there's no match, swap them back
         if (matches[0] == null && matches[1] == null)
-            StartCoroutine(Swap(copies));
+        {
+
+            yield return StartCoroutine(Swap(copies));
+            if (ScanForMatches())
+            {
+                StartCoroutine(FillAndScanGrid());
+            }
+        }
         else
         {
-            CollapseGird();
-            StartCoroutine(PopulateGrid(true));
+            StartCoroutine(FillAndScanGrid());
         }
+    }
+
+    private IEnumerator FillAndScanGrid()
+    {
+        // collapse and repopulate the grid
+            CollapseGird();
+            yield return StartCoroutine(PopulateGrid(true));
+
+            // scan grid for chain reactions
+            if (ScanForMatches())
+            {
+                StartCoroutine(FillAndScanGrid());
+            }
     }
 
     private Match GetMatch(Matchable toMatch)
@@ -237,5 +273,36 @@ public class MatchableGrid : GridSystem<Matchable>
 
         // start animation to move it on screen
         StartCoroutine(toMove.MoveToPosition(transform.position + new Vector3(x, y)));
+    }
+
+    // scan the grid for any matches and resolve them
+    private bool ScanForMatches()
+    {
+        bool madeAMatch = false;
+        Matchable toMatch;
+        Match match;
+
+        // iterate through the grid, looking for non-empty and idle matchables
+        for (int y = 0; y != Dimensions.y; ++y)
+        {
+            for (int x = 0; x != Dimensions.x; ++x)
+            {
+                if (!IsEmpty(x, y))
+                {
+                    toMatch = GetItemAt(x, y);
+                    if (!toMatch.Idle)
+                        continue;
+
+                    // try match and resolve
+                    match = GetMatch(toMatch);
+                    if (match != null)
+                    {
+                        madeAMatch = true;
+                        StartCoroutine(score.ResolveMatch(match));
+                    }
+                }
+            }
+        }
+        return madeAMatch;
     }
 }

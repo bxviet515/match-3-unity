@@ -28,7 +28,7 @@ public class GameManager : Singleton<GameManager>
 
 
         yield return null;
-        StartCoroutine(grid.PopulateGrid());
+        StartCoroutine(grid.PopulateGrid(false, true));
         // then remove the loading screen down here
     }
 }

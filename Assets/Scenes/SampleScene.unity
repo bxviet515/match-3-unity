@@ -906,7 +906,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefab: {fileID: 5402012505678902380, guid: 88b69fc133d386f4385524fce3ada907, type: 3}
-  howManyTypes: 7
+  howManyTypes: 4
   sprites:
   - {fileID: -1303111540, guid: a4d62e39f1be5ec44bfad3c5d475c7f3, type: 3}
   - {fileID: 424600459, guid: a4d62e39f1be5ec44bfad3c5d475c7f3, type: 3}
