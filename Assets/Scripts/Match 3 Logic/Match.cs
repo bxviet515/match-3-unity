@@ -1,9 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+public enum Orientation
+{
+    none,
+    horizontal,
+    vertical,
+    both
+}
 public class Match
 {
+    public Orientation orientation = Orientation.none;
+    private int unlisted = 0;
     private List<Matchable> matchables;
     public List<Matchable> Matchables
     {
@@ -14,8 +22,12 @@ public class Match
     }
     public int Count {
         get{
-            return matchables.Count;
+            return matchables.Count + unlisted;
         }
+    }
+    public bool Contains(Matchable toCompare)
+    {
+        return matchables.Contains(toCompare);
     }
     public Match()
     {
@@ -32,6 +44,10 @@ public class Match
         matchables.Add(toAdd);
     }
 
+    public void AddUnlisted()
+    {
+        ++unlisted;
+    }
 
     public void Merge(Match toMerge)
     {

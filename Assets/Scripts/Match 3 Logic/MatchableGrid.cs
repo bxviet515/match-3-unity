@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEditorInternal.Profiling.Memory.Experimental;
 using UnityEngine;
 
@@ -56,7 +57,6 @@ public class MatchableGrid : GridSystem<Matchable>
                         }
 
                     }
-                    yield return new WaitForSeconds(0.1f);
                 }
         }
         for (int i = 0; i != newMatchables.Count; ++i)
@@ -173,19 +173,27 @@ public class MatchableGrid : GridSystem<Matchable>
         Match horizontalMatch, verticalMatch;
 
         // first get horizontal matches to the left and right
-        horizontalMatch = GetMatchesInDirection(toMatch, Vector2Int.left);
-        horizontalMatch.Merge(GetMatchesInDirection(toMatch, Vector2Int.right));
+        horizontalMatch = GetMatchesInDirection(match, toMatch, Vector2Int.left);
+        horizontalMatch.Merge(GetMatchesInDirection(match, toMatch, Vector2Int.right));
+
+        horizontalMatch.orientation = Orientation.horizontal;
         if (horizontalMatch.Count > 1)
         {
             match.Merge(horizontalMatch);
+            // scan for vertical branches
+            GetBranches(match, horizontalMatch, Orientation.vertical);
         }
 
         // then get vertical matches up and down
-        verticalMatch = GetMatchesInDirection(toMatch, Vector2Int.up);
-        verticalMatch.Merge(GetMatchesInDirection(toMatch, Vector2Int.down));
+        verticalMatch = GetMatchesInDirection(match, toMatch, Vector2Int.up);
+        verticalMatch.Merge(GetMatchesInDirection(match, toMatch, Vector2Int.down));
+
+        verticalMatch.orientation = Orientation.vertical;
         if (verticalMatch.Count > 1)
         {
             match.Merge(verticalMatch);
+            // scan for horizontal branches
+            GetBranches(match, verticalMatch, Orientation.horizontal);
         }
 
         if (match.Count == 1)
@@ -195,8 +203,25 @@ public class MatchableGrid : GridSystem<Matchable>
         return match;
     }
 
+    private void GetBranches(Match tree, Match branchToSearch, Orientation perpendicular)
+    {
+        Match branch;
+        foreach (Matchable matchable in branchToSearch.Matchables)
+        {
+            branch = GetMatchesInDirection(tree, matchable, perpendicular == Orientation.horizontal ? Vector2Int.left : Vector2Int.down);
+            branch.Merge(GetMatchesInDirection(tree, matchable, perpendicular == Orientation.horizontal ? Vector2Int.right : Vector2Int.up));
+
+            branch.orientation = perpendicular;
+            if (branch.Count > 1)
+            {
+                tree.Merge(branch);
+                GetBranches(tree, branch, perpendicular == Orientation.horizontal ? Orientation.vertical : Orientation.horizontal);
+            }
+        }
+    }
+
     // add each matching matchable in the direction to a match and return it
-    private Match GetMatchesInDirection(Matchable toMatch, Vector2Int direction)
+    private Match GetMatchesInDirection(Match tree, Matchable toMatch, Vector2Int direction)
     {
         Match match = new Match();
         Vector2Int position = toMatch.position + direction;
@@ -206,7 +231,10 @@ public class MatchableGrid : GridSystem<Matchable>
             next = GetItemAt(position);
             if (next.Type == toMatch.Type && next.Idle)
             {
-                match.AddMatchable(next);
+                if (!tree.Contains(next))
+                    match.AddMatchable(next);
+                else match.AddUnlisted();
+
                 position += direction;
             }
             else break;
