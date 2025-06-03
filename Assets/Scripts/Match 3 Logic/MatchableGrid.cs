@@ -21,39 +21,40 @@ public class MatchableGrid : GridSystem<Matchable>
         for (int y = 0; y != Dimensions.y; ++y)
         {
             for (int x = 0; x != Dimensions.x; ++x)
-            {
-                // get a matchable from the pool
-                newMatchable = pool.GetRandomMatchable();
-
-                // position the matchable on screen
-                //newMatchable.transform.position = transform.position + new Vector3(x, y);
-                onScreenPosition = transform.position + new Vector3(x, y);
-                newMatchable.transform.position = onScreenPosition + offScreenOffset;
-
-                // activate the matchable
-                newMatchable.gameObject.SetActive(true);
-
-                // tell this matchable where it is on the grid
-                newMatchable.position = new Vector2Int(x, y);
-
-                // place the matchable in the grid
-                PutItemAt(newMatchable, x, y);
-                int type = newMatchable.Type;
-                while (!allowMatches && IsPartOfAMatch(newMatchable))
+                if (IsEmpty(x, y))
                 {
-                    // change the matchable's type until it isn't a match anymore
-                    if (pool.NextType(newMatchable) == type)
-                    {
-                        Debug.LogWarning("Failed to find a matchable type that didn't match at (" + x + ", " + y + ")");
-                        Debug.Break();
-                        break;
-                    }
+                    // get a matchable from the pool
+                    newMatchable = pool.GetRandomMatchable();
 
+                    // position the matchable on screen
+                    //newMatchable.transform.position = transform.position + new Vector3(x, y);
+                    onScreenPosition = transform.position + new Vector3(x, y);
+                    newMatchable.transform.position = onScreenPosition + offScreenOffset;
+
+                    // activate the matchable
+                    newMatchable.gameObject.SetActive(true);
+
+                    // tell this matchable where it is on the grid
+                    newMatchable.position = new Vector2Int(x, y);
+
+                    // place the matchable in the grid
+                    PutItemAt(newMatchable, x, y);
+                    int type = newMatchable.Type;
+                    while (!allowMatches && IsPartOfAMatch(newMatchable))
+                    {
+                        // change the matchable's type until it isn't a match anymore
+                        if (pool.NextType(newMatchable) == type)
+                        {
+                            Debug.LogWarning("Failed to find a matchable type that didn't match at (" + x + ", " + y + ")");
+                            Debug.Break();
+                            break;
+                        }
+
+                    }
+                    // move the matchable to its on screen position
+                    StartCoroutine(newMatchable.MoveToPosition(onScreenPosition));
+                    yield return new WaitForSeconds(0.1f);
                 }
-                // move the matchable to its on screen position
-                StartCoroutine(newMatchable.MoveToPosition(onScreenPosition));
-                yield return new WaitForSeconds(0.1f);
-            }
         }
     }
 
@@ -121,8 +122,13 @@ public class MatchableGrid : GridSystem<Matchable>
         }
 
         // if there's no match, swap them back
-        if(matches[0] == null && matches[1] == null)
+        if (matches[0] == null && matches[1] == null)
             StartCoroutine(Swap(copies));
+        else
+        {
+            CollapseGird();
+            StartCoroutine(PopulateGrid(true));
+        }
     }
 
     private Match GetMatch(Matchable toMatch)
@@ -152,7 +158,7 @@ public class MatchableGrid : GridSystem<Matchable>
         }
         return match;
     }
-    
+
     // add each matching matchable in the direction to a match and return it
     private Match GetMatchesInDirection(Matchable toMatch, Vector2Int direction)
     {
@@ -168,7 +174,7 @@ public class MatchableGrid : GridSystem<Matchable>
                 position += direction;
             }
             else break;
-            
+
         }
         return match;
     }
@@ -190,5 +196,46 @@ public class MatchableGrid : GridSystem<Matchable>
         // move them to their new positions on screen
         StartCoroutine(toBeSwapped[0].MoveToPosition(worldPosition[1]));
         yield return StartCoroutine(toBeSwapped[1].MoveToPosition(worldPosition[0]));
+    }
+
+    private void CollapseGird()
+    {
+        /*
+        * Go through each column left to right,
+        * search from bottom up to find an empty space,
+        * then look above the empty space, and up through the rest of the column,
+        * until find a non empty space.
+        * Move the matchable at the non empty space into the empty space,
+        * then continue looking for empty spaces
+        */
+        for (int x = 0; x != Dimensions.x; ++x)
+        {
+            for (int yEmpty = 0; yEmpty != Dimensions.y - 1; ++yEmpty)
+            {
+                if (IsEmpty(x, yEmpty))
+                {
+                    for (int yNotEmpty = yEmpty + 1; yNotEmpty != Dimensions.y; ++yNotEmpty)
+                    {
+                        if (!IsEmpty(x, yNotEmpty) && GetItemAt(x, yNotEmpty).Idle)
+                        {
+                            MoveMatchableToPosition(GetItemAt(x, yNotEmpty), x, yEmpty);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void MoveMatchableToPosition(Matchable toMove, int x, int y)
+    {
+        // move the matchable to its new position in the grid
+        MoveItemTo(toMove.position, new Vector2Int(x, y));
+
+        // update the matchable's internal grid position
+        toMove.position = new Vector2Int(x, y);
+
+        // start animation to move it on screen
+        StartCoroutine(toMove.MoveToPosition(transform.position + new Vector3(x, y)));
     }
 }
