@@ -7,9 +7,11 @@ public class MatchableGrid : GridSystem<Matchable>
 {
     [SerializeField] private Vector3 offScreenOffset;
     private MatchablePool pool;
+    private ScoreManager score;
     private void Start()
     {
         pool = (MatchablePool)MatchablePool.Instance;
+        score = ScoreManager.Instance;
     }
     public IEnumerator PopulateGrid(bool allowMatches = false)
     {
@@ -80,7 +82,7 @@ public class MatchableGrid : GridSystem<Matchable>
         return false;
     }
 
-    // count the number of matches on the grid starting form the matchable to match moving in the direction indicated
+    // count the number of matches on the grid starting from the matchable to match moving in the direction indicated
     private int CountMatchesInDirection(Matchable toMatch, Vector2Int direction)
     {
         int matches = 0;
@@ -110,12 +112,12 @@ public class MatchableGrid : GridSystem<Matchable>
         if (matches[0] != null)
         {
             // resolve match
-            print(matches[0]);
+            StartCoroutine(score.ResolveMatch(matches[0]));
 
         }
         if (matches[1] != null)
         {
-            print(matches[1]);
+            StartCoroutine(score.ResolveMatch(matches[1]));
         }
 
         // if there's no match, swap them back
