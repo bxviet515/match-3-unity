@@ -31,9 +31,30 @@ public class Movable : MonoBehaviour
         idle = true;
 
     }
+    
+    // corountine move from current position to transform, chasing it if it is moving
+    public IEnumerator MoveToTransform(Transform target)
+    {
+        if (speed < 0) Debug.LogWarning("Speed must be a positive number.");
+        from = transform.position;
+        to = target.position;
+        howfar = 0;
+        idle = false;
+        do
+        {
+            howfar += speed * Time.deltaTime;
+            if (howfar > 1) howfar = 1;
+            to = target.position;
+            transform.position = Vector3.LerpUnclamped(from, to, Easing(howfar));
+            yield return null;
+        }
+        while (howfar != 1);
+        idle = true;
+
+    }
 
     private float Easing(float t)
     {
-        return t*t;
+        return t * t;
     }
 }

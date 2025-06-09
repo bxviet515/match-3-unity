@@ -7,6 +7,9 @@ public class MatchablePool : ObjectPool<Matchable>
     [SerializeField] private int howManyTypes;
     [SerializeField] private Sprite[] sprites;
     [SerializeField] private Color[] colors;
+    [SerializeField] private Sprite match4Powerup;
+    [SerializeField] private Sprite match5Powerup;
+    [SerializeField] private Sprite crossPowerup;
     public void RandomizeType(Matchable toRandomize)
     {
         int random = Random.Range(0, howManyTypes);
@@ -33,4 +36,16 @@ public class MatchablePool : ObjectPool<Matchable>
     //     RandomizeType(randomMatchable);
     //     return randomMatchable;
     // }
+
+    public Matchable UpgradeMatchable(Matchable toBeUpgraded, MatchType matchType)
+    {
+        if(matchType == MatchType.cross)
+            return toBeUpgraded.Upgrade(crossPowerup);
+        if (matchType == MatchType.match4)
+                return toBeUpgraded.Upgrade(match4Powerup);
+        if(matchType == MatchType.match5){
+            return toBeUpgraded.Upgrade(match5Powerup);
+        }
+        return toBeUpgraded;
+    }
 }

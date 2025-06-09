@@ -767,7 +767,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1383431312
 RectTransform:
   m_ObjectHideFlags: 0
@@ -923,6 +923,9 @@ MonoBehaviour:
   - {r: 0, g: 0.60606766, b: 1, a: 1}
   - {r: 0.6357827, g: 0, b: 1, a: 1}
   - {r: 1, g: 0, b: 0.2598343, a: 1}
+  match4Powerup: {fileID: 498439358, guid: a4d62e39f1be5ec44bfad3c5d475c7f3, type: 3}
+  match5Powerup: {fileID: -979932775, guid: a4d62e39f1be5ec44bfad3c5d475c7f3, type: 3}
+  crossPowerup: {fileID: -1508278318, guid: a4d62e39f1be5ec44bfad3c5d475c7f3, type: 3}
 --- !u!4 &1800960347
 Transform:
   m_ObjectHideFlags: 0

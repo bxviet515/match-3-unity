@@ -37,7 +37,7 @@ public class Matchable : Movable
         spriteRenderer.sortingOrder = 2;
 
         // move off the grid to a collection point
-        yield return StartCoroutine(MoveToPosition(collectionPoint.position));
+        yield return StartCoroutine(MoveToTransform(collectionPoint));
 
         // reset
         spriteRenderer.sortingOrder = 1;
@@ -45,6 +45,22 @@ public class Matchable : Movable
         // return back to the pool
         pool.ReturnObjectToPool(this);
         yield return null;
+    }
+
+    // change the sprite of this matchable to be a powerup while retaining color and type
+    public Matchable Upgrade(Sprite powerUpSprite)
+    {
+        spriteRenderer.sprite = powerUpSprite;
+        return this;
+    }
+
+    // set the sorting order of the sprite renderer so it will be drawn above or below others
+    public int SortingOrder
+    {
+        set
+        {
+            spriteRenderer.sortingOrder = value;
+        }
     }
     private void OnMouseDown()
     {
