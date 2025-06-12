@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,8 +6,16 @@ using UnityEngine;
 public class Matchable : Movable
 {
     private int type;
+    private MatchableGrid grid;
     private MatchablePool pool;
     private Cursor cursor;
+    private MatchType powerup = MatchType.invalid;
+    public bool IsGem
+    {
+        get {
+            return powerup == MatchType.match5;
+        }
+    }
     public int Type
     {
         get
@@ -21,6 +30,7 @@ public class Matchable : Movable
     {
         cursor = Cursor.Instance;
         pool = (MatchablePool)MatchablePool.Instance;
+        grid = (MatchableGrid)MatchableGrid.Instance;
         spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
@@ -33,8 +43,30 @@ public class Matchable : Movable
 
     public IEnumerator Resolve(Transform collectionPoint)
     {
+        // if matchable is a power up, resolve it as such
+        if (powerup != MatchType.invalid)
+        {
+            // resolve a match4 powerup
+            if (powerup == MatchType.match4)
+            {
+                // score everything adjacent to this
+                grid.MatchAllAdjacent(this);
+            }
+
+            // resolve a cross powerup
+            if (powerup == MatchType.cross)
+            {
+                grid.MatchRowAndColumn(this);
+            }
+
+            powerup = MatchType.invalid;
+        }
+
+        if (collectionPoint == null)
+            yield break;
+
         // draw above others in the grid
-        spriteRenderer.sortingOrder = 2;
+            spriteRenderer.sortingOrder = 2;
 
         // move off the grid to a collection point
         yield return StartCoroutine(MoveToTransform(collectionPoint));
@@ -48,8 +80,22 @@ public class Matchable : Movable
     }
 
     // change the sprite of this matchable to be a powerup while retaining color and type
-    public Matchable Upgrade(Sprite powerUpSprite)
+    public Matchable Upgrade(MatchType powerupType, Sprite powerUpSprite)
     {
+        // if this is already a powerup, resolve it before upgrading
+        if (powerup != MatchType.invalid)
+        {
+            idle = false;
+            StartCoroutine(Resolve(null));
+            idle = true;
+        }
+
+        if (powerupType == MatchType.match5)
+        {
+            type = -1;
+            spriteRenderer.color = Color.white;
+        }
+        powerup = powerupType;
         spriteRenderer.sprite = powerUpSprite;
         return this;
     }

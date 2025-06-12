@@ -40,11 +40,11 @@ public class MatchablePool : ObjectPool<Matchable>
     public Matchable UpgradeMatchable(Matchable toBeUpgraded, MatchType matchType)
     {
         if(matchType == MatchType.cross)
-            return toBeUpgraded.Upgrade(crossPowerup);
+            return toBeUpgraded.Upgrade(MatchType.cross, crossPowerup);
         if (matchType == MatchType.match4)
-                return toBeUpgraded.Upgrade(match4Powerup);
+                return toBeUpgraded.Upgrade(MatchType.match4, match4Powerup);
         if(matchType == MatchType.match5){
-            return toBeUpgraded.Upgrade(match5Powerup);
+            return toBeUpgraded.Upgrade(MatchType.match5, match5Powerup);
         }
         return toBeUpgraded;
     }

@@ -7,7 +7,7 @@ public class Movable : MonoBehaviour
     private Vector3 from, to;
     private float howfar;
 
-    private bool idle;
+    protected bool idle = true;
     public bool Idle => idle;
     [SerializeField] private float speed = 1;
 

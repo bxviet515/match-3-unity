@@ -36,25 +36,30 @@ public class ScoreManager : Singleton<ScoreManager>
         scoreText.text = "Score: " + score;
     }
 
-    public IEnumerator ResolveMatch(Match toResolve)
+    public IEnumerator ResolveMatch(Match toResolve, MatchType powerupUsed = MatchType.invalid)
     {
-        Matchable powerup = null;
+        Matchable powerupFormed = null;
         Matchable matchable;
         Transform target = collectionPoint;
-        // if larger match is made, create a powerup
-        if (toResolve.Count > 3)
+        // if no powerup was used to trigger and larger match is made, create a powerup
+        if (powerupUsed == MatchType.invalid && toResolve.Count > 3)
         {
-            powerup = pool.UpgradeMatchable(toResolve.ToBeUpgraded, toResolve.Type);
-            toResolve.RemoveMatchable(powerup);
-            target = powerup.transform;
-            powerup.SortingOrder = 3;
+            powerupFormed = pool.UpgradeMatchable(toResolve.ToBeUpgraded, toResolve.Type);
+            toResolve.RemoveMatchable(powerupFormed);
+            target = powerupFormed.transform;
+            powerupFormed.SortingOrder = 3;
         }
         
         for (int i = 0; i != toResolve.Count; ++i)
         {
             matchable = toResolve.Matchables[i];
+
+            // only allow gems used as powerups to resolve gems
+            if (powerupUsed != MatchType.match5 && matchable.IsGem)
+                continue;
+
             // remove the matchables from the grid
-            grid.RemoveItemAt(matchable.position);
+                grid.RemoveItemAt(matchable.position);
 
             // move them off to the side of the screen
             if (i == toResolve.Count - 1)
@@ -74,9 +79,9 @@ public class ScoreManager : Singleton<ScoreManager>
         yield return null;
 
         // if there was a powerup, reset the sorting order
-        if (powerup != null)
+        if (powerupFormed != null)
         {
-            powerup.SortingOrder = 1;
+            powerupFormed.SortingOrder = 1;
         }
     }
 }

@@ -30,7 +30,7 @@ public class MatchableGrid : GridSystem<Matchable>
                     // get a matchable from the pool
                     newMatchable = pool.GetRandomMatchable();
 
-                    
+
                     newMatchable.transform.position = transform.position + new Vector3(x, y) + offScreenOffset;
 
                     // activate the matchable
@@ -121,6 +121,26 @@ public class MatchableGrid : GridSystem<Matchable>
         // yield until matchables animate Swapping
         yield return StartCoroutine(Swap(copies));
 
+        // special cases for gems
+        // if both are gems, then match everything on the grid
+        if (copies[0].IsGem && copies[1].IsGem)
+        {
+            MatchEverything();
+            yield break;
+        }
+        // if 1 is a gem, then mathc all matching the color of the others
+        else if (copies[0].IsGem)
+        {
+            MatchEverythingByType(copies[0], copies[1].Type);
+            yield break;
+        }
+        else if (copies[1].IsGem)
+        {
+            MatchEverythingByType(copies[1], copies[0].Type);
+            yield break;
+        }
+
+
         // check for a valid match
         Match[] matches = new Match[2];
         matches[0] = GetMatch(copies[0]);
@@ -157,14 +177,14 @@ public class MatchableGrid : GridSystem<Matchable>
     private IEnumerator FillAndScanGrid()
     {
         // collapse and repopulate the grid
-            CollapseGird();
-            yield return StartCoroutine(PopulateGrid(true));
+        CollapseGird();
+        yield return StartCoroutine(PopulateGrid(true));
 
-            // scan grid for chain reactions
-            if (ScanForMatches())
-            {
-                StartCoroutine(FillAndScanGrid());
-            }
+        // scan grid for chain reactions
+        if (ScanForMatches())
+        {
+            StartCoroutine(FillAndScanGrid());
+        }
     }
 
     private Match GetMatch(Matchable toMatch)
@@ -333,4 +353,64 @@ public class MatchableGrid : GridSystem<Matchable>
         }
         return madeAMatch;
     }
+
+    // make a match of all matchables adjacent to this power up on the grid and resolve it
+    public void MatchAllAdjacent(Matchable powerup)
+    {
+        Match allAdjacent = new Match();
+        for (int y = powerup.position.y - 1; y != powerup.position.y + 2; ++y)
+        {
+            for (int x = powerup.position.x - 1; x != powerup.position.x + 2; ++x)
+            {
+                if (CheckBounds(x, y) && !IsEmpty(x, y) && GetItemAt(x, y).Idle)
+                {
+                    allAdjacent.AddMatchable(GetItemAt(x, y));
+                }
+            }
+        }
+        StartCoroutine(score.ResolveMatch(allAdjacent, MatchType.match4));
+    }
+
+    // make a match of everything in the row and column that contains the powerup and resolve it
+    public void MatchRowAndColumn(Matchable powerup)
+    {
+        Match rowAndColumn = new Match();
+        for (int y = 0; y != Dimensions.y; ++y)
+            if (CheckBounds(powerup.position.x, y) && !IsEmpty(powerup.position.x, y) && GetItemAt(powerup.position.x, y).Idle)
+                rowAndColumn.AddMatchable(GetItemAt(powerup.position.x, y));
+
+        for (int x = 0; x != Dimensions.x; ++x)
+            if (CheckBounds(x, powerup.position.y) && !IsEmpty(x, powerup.position.y) && GetItemAt(x, powerup.position.y).Idle)
+                rowAndColumn.AddMatchable(GetItemAt(x, powerup.position.y));
+
+        StartCoroutine(score.ResolveMatch(rowAndColumn, MatchType.cross));
+    }
+
+
+    // make everything on the grid with a specific type and resolve it
+    public void MatchEverythingByType(Matchable gem, int type)
+    {
+        Match everythingByType = new Match(gem);
+        for (int y = 0; y != Dimensions.y; ++y)
+            for (int x = 0; x != Dimensions.x; ++x)
+                if (CheckBounds(x, y) && !IsEmpty(x, y) && GetItemAt(x, y).Idle && GetItemAt(x, y).Type == type)
+                    everythingByType.AddMatchable(GetItemAt(x, y));
+
+        StartCoroutine(score.ResolveMatch(everythingByType, MatchType.match5));
+        StartCoroutine(FillAndScanGrid());
+    }
+
+    // make everything on the grid and resolve it
+    public void MatchEverything()
+    {
+        Match everything = new Match();
+        for (int y = 0; y != Dimensions.y; ++y)
+            for (int x = 0; x != Dimensions.x; ++x)
+                if (CheckBounds(x, y) && !IsEmpty(x, y) && GetItemAt(x, y).Idle)
+                    everything.AddMatchable(GetItemAt(x, y));
+
+        StartCoroutine(score.ResolveMatch(everything, MatchType.match5));
+        StartCoroutine(FillAndScanGrid());
+    }
+
 }
