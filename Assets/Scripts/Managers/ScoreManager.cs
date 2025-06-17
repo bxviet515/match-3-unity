@@ -1,16 +1,28 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 [RequireComponent(typeof(Text))]
 public class ScoreManager : Singleton<ScoreManager>
 {
-    private Text scoreText;
+    [SerializeField]
+    private Text scoreText,
+                    comboText;
+
+
+    [SerializeField] private Slider comboSlider;
     private MatchableGrid grid;
     private MatchablePool pool;
 
+    private float timeSinceLastScore;
+    [SerializeField] private float maxComboTime, currentComboTime;
+
+    private bool timerIsActive;
+
     [SerializeField] private Transform collectionPoint;
-    private int score;
+    private int score,
+                comboMultiplier;
     public int Score
     {
         get
@@ -19,21 +31,48 @@ public class ScoreManager : Singleton<ScoreManager>
         }
     }
 
-    protected override void Init()
-    {
-        scoreText = GetComponent<Text>();
-        
-    }
 
     private void Start()
     {
         grid = (MatchableGrid)MatchableGrid.Instance;
         pool = (MatchablePool)MatchablePool.Instance;
+        comboText.enabled = false;
+        comboSlider.gameObject.SetActive(false);
     }
     public void AddScore(int amount)
     {
-        score += amount;
+        score += amount * IncreaseCombo();
         scoreText.text = "Score: " + score;
+        timeSinceLastScore = 0;
+        if (!timerIsActive)
+        {
+            StartCoroutine(ComboTimer());
+        }
+    }
+
+    private IEnumerator ComboTimer()
+    {
+        timerIsActive = true;
+        comboText.enabled = true;
+        comboSlider.gameObject.SetActive(true);
+        do
+        {
+            timeSinceLastScore += Time.deltaTime;
+            comboSlider.value = 1 - timeSinceLastScore / currentComboTime;
+            yield return null;
+        }
+        while (timeSinceLastScore < currentComboTime);
+        comboMultiplier = 0;
+        comboText.enabled = false;
+        comboSlider.gameObject.SetActive(false);
+        timerIsActive = false;
+    }
+
+    private int IncreaseCombo()
+    {
+        comboText.text = "Combo x" + ++comboMultiplier;
+        currentComboTime = maxComboTime - Mathf.Log(comboMultiplier) / 2;
+        return comboMultiplier;
     }
 
     public IEnumerator ResolveMatch(Match toResolve, MatchType powerupUsed = MatchType.invalid)
@@ -49,7 +88,7 @@ public class ScoreManager : Singleton<ScoreManager>
             target = powerupFormed.transform;
             powerupFormed.SortingOrder = 3;
         }
-        
+
         for (int i = 0; i != toResolve.Count; ++i)
         {
             matchable = toResolve.Matchables[i];
@@ -59,7 +98,7 @@ public class ScoreManager : Singleton<ScoreManager>
                 continue;
 
             // remove the matchables from the grid
-                grid.RemoveItemAt(matchable.position);
+            grid.RemoveItemAt(matchable.position);
 
             // move them off to the side of the screen
             if (i == toResolve.Count - 1)
