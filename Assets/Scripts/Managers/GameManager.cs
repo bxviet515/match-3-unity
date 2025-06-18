@@ -13,7 +13,7 @@ public class GameManager : Singleton<GameManager>
     {
         pool = (MatchablePool)MatchablePool.Instance;
         grid = (MatchableGrid)MatchableGrid.Instance;
-        
+
         StartCoroutine(Setup());
     }
 
@@ -29,6 +29,15 @@ public class GameManager : Singleton<GameManager>
 
         yield return null;
         StartCoroutine(grid.PopulateGrid(false, true));
+
         // then remove the loading screen down here
+
+        // Check for gridlock and offer the player a hint if they need it
+        grid.CheckPossibleMoves();
+    }
+
+    public void NoMoreMoves()
+    {
+        
     }
 }

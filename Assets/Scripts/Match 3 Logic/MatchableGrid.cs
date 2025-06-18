@@ -7,12 +7,15 @@ using UnityEngine;
 public class MatchableGrid : GridSystem<Matchable>
 {
     [SerializeField] private Vector3 offScreenOffset;
+    private List<Matchable> possibleMoves;
     private MatchablePool pool;
     private ScoreManager score;
+    private HintIndicator hint;
     private void Start()
     {
         pool = (MatchablePool)MatchablePool.Instance;
         score = ScoreManager.Instance;
+        hint = HintIndicator.Instance;
     }
 
     public IEnumerator PopulateGrid(bool allowMatches = false, bool initialPopulation = false)
@@ -118,6 +121,10 @@ public class MatchableGrid : GridSystem<Matchable>
         Matchable[] copies = new Matchable[2];
         copies[0] = toBeSwapped[0];
         copies[1] = toBeSwapped[1];
+
+        // hide the hint indicator
+        hint.CancelHint();
+
         // yield until matchables animate Swapping
         yield return StartCoroutine(Swap(copies));
 
@@ -185,8 +192,27 @@ public class MatchableGrid : GridSystem<Matchable>
         {
             StartCoroutine(FillAndScanGrid());
         }
+        // if no chain reactions, grid is idle, so check for possible moves
+        else
+        {
+            CheckPossibleMoves();
+        }
     }
 
+    public void CheckPossibleMoves()
+    {
+        if (ScanForMoves() == 0)
+        {
+            // no moves!
+            GameManager.Instance.NoMoreMoves();
+        }
+        else
+        {
+            // offer a hint
+            //hint.EnableHintButton();
+            hint.StartAutoHint(possibleMoves[Random.Range(0, possibleMoves.Count)].transform);
+        }
+    }
     private Match GetMatch(Matchable toMatch)
     {
         Match match = new Match(toMatch);
@@ -413,4 +439,100 @@ public class MatchableGrid : GridSystem<Matchable>
         StartCoroutine(FillAndScanGrid());
     }
 
+    // scan for all possible moves on the grid
+    private int ScanForMoves()
+    {
+        possibleMoves = new List<Matchable>();
+
+        // scan through the entire grid
+        for (int y = 0; y != Dimensions.y; ++y)
+        {
+            for (int x = 0; x != Dimensions.x; ++x)
+            {
+                if (CheckBounds(x, y) && !IsEmpty(x, y) && CanMove(GetItemAt(x, y)))
+                    possibleMoves.Add(GetItemAt(x, y));
+            }
+        }
+        return possibleMoves.Count;
+    }
+
+    private bool CanMove(Matchable toCheck)
+    {
+        if (CanMove(toCheck, Vector2Int.up)
+                || CanMove(toCheck, Vector2Int.down)
+                || CanMove(toCheck, Vector2Int.left)
+                || CanMove(toCheck, Vector2Int.right))
+        {
+            return true;
+        }
+        if (toCheck.IsGem)
+        {
+            // if it's a gem, it can move in any direction
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool CanMove(Matchable toCheck, Vector2Int direction)
+    {
+        Vector2Int position1 = toCheck.position + direction ;
+        Vector2Int position2 = toCheck.position + direction * 2;
+
+        if (IsAPotentialMatch(toCheck, position1, position2))
+        {
+            return true;
+        }
+
+        // what is the clockwise direction?
+        Vector2Int cw = new Vector2Int(direction.y, -direction.x),
+                    ccw = new Vector2Int(-direction.y, direction.x);
+
+
+        // Look diagonally clockwise
+        position1 = toCheck.position + direction + cw;
+        position2 = toCheck.position + direction + cw * 2;
+        if (IsAPotentialMatch(toCheck, position1, position2))
+        {
+            return true;
+        }
+
+        // Look diagonally both ways
+        position2 = toCheck.position + direction * ccw;
+        if (IsAPotentialMatch(toCheck, position1, position2))
+        {
+            return true;
+        }
+
+        // Look diagonally counter clockwise
+        position1 = toCheck.position + direction + ccw * 2;
+        if (IsAPotentialMatch(toCheck, position1, position2))
+        {
+            return true;
+        }
+
+
+        return false;
+    }
+
+    // Will these matchables form a potential match?
+    private bool IsAPotentialMatch(Matchable toCompare, Vector2Int position1, Vector2Int position2)
+    {
+        if (CheckBounds(position1) && CheckBounds(position2)
+            && !IsEmpty(position1) && !IsEmpty(position2)
+            && GetItemAt(position1).Type == toCompare.Type
+            && GetItemAt(position2).Type == toCompare.Type
+            && GetItemAt(position1).Idle && GetItemAt(position2).Idle)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    // Show a hint for the player
+    public void ShowHint()
+    {
+        ScanForMoves();
+        hint.IndicateHint(possibleMoves[Random.Range(0, possibleMoves.Count)].transform);
+    }
 }
