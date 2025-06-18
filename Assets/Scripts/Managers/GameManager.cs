@@ -9,35 +9,50 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private Text gridOutput;
     private MatchablePool pool;
     private MatchableGrid grid;
+    private Cursor cursor;
+    private AudioMixer audioMixer;
+    [SerializeField] private Fader loadingScreen;
     private void Start()
     {
         pool = (MatchablePool)MatchablePool.Instance;
         grid = (MatchableGrid)MatchableGrid.Instance;
-
+        cursor = Cursor.Instance;
+        audioMixer = AudioMixer.Instance;
         StartCoroutine(Setup());
     }
 
     private IEnumerator Setup()
     {
-        // it's a good idea to put a loading screen here
+        // disable user input
+        cursor.enabled = false;
+
+        // unhide loading screen
+        loadingScreen.Hide(false);
 
         // pool the matchables
-        pool.PoolObjects(dimensions.x * dimensions.y);
+        pool.PoolObjects(dimensions.x * dimensions.y * 2);
+
         // create the grid
         grid.InitializeGrid(dimensions);
 
+        // fade out loading screen
+        StartCoroutine(loadingScreen.Fade(0));
 
-        yield return null;
-        StartCoroutine(grid.PopulateGrid(false, true));
+        // start background music
+        audioMixer.PlayMusic();
 
-        // then remove the loading screen down here
+        // populate the grid
+        yield return StartCoroutine(grid.PopulateGrid(false, true));
 
         // Check for gridlock and offer the player a hint if they need it
         grid.CheckPossibleMoves();
+
+        // enable user input
+        cursor.enabled = true;
     }
 
     public void NoMoreMoves()
     {
-        
+        grid.MatchEverything();
     }
 }

@@ -11,11 +11,13 @@ public class MatchableGrid : GridSystem<Matchable>
     private MatchablePool pool;
     private ScoreManager score;
     private HintIndicator hint;
-    private void Start()
+    private AudioMixer audioMixer;
+    private  void Start()
     {
         pool = (MatchablePool)MatchablePool.Instance;
         score = ScoreManager.Instance;
         hint = HintIndicator.Instance;
+        audioMixer = AudioMixer.Instance;
     }
 
     public IEnumerator PopulateGrid(bool allowMatches = false, bool initialPopulation = false)
@@ -66,6 +68,10 @@ public class MatchableGrid : GridSystem<Matchable>
         {
             // position the matchable on screen
             onScreenPosition = transform.position + new Vector3(newMatchables[i].position.x, newMatchables[i].position.y);
+
+            // play a landing sound effect a delay when the matchable lands in position
+            audioMixer.PlayDelayedSound(SoundEffects.land, 1f / newMatchables[i].Speed);
+
             // move the matchable to its on screen position
             if (i == newMatchables.Count - 1)
             {
@@ -306,6 +312,9 @@ public class MatchableGrid : GridSystem<Matchable>
         // move them to their new positions on screen
         StartCoroutine(toBeSwapped[0].MoveToPosition(worldPosition[1]));
         yield return StartCoroutine(toBeSwapped[1].MoveToPosition(worldPosition[0]));
+
+        // play swap sound
+        audioMixer.PlaySound(SoundEffects.swap);
     }
 
     private void CollapseGird()
@@ -347,6 +356,9 @@ public class MatchableGrid : GridSystem<Matchable>
 
         // start animation to move it on screen
         StartCoroutine(toMove.MoveToPosition(transform.position + new Vector3(x, y)));
+
+        // play a landing sound effect a delay when the matchable lands in position
+        audioMixer.PlayDelayedSound(SoundEffects.land, 1f / toMove.Speed);
     }
 
     // scan the grid for any matches and resolve them
@@ -395,6 +407,9 @@ public class MatchableGrid : GridSystem<Matchable>
             }
         }
         StartCoroutine(score.ResolveMatch(allAdjacent, MatchType.match4));
+
+        // play powerup sound
+        audioMixer.PlaySound(SoundEffects.powerup);
     }
 
     // make a match of everything in the row and column that contains the powerup and resolve it
@@ -410,6 +425,9 @@ public class MatchableGrid : GridSystem<Matchable>
                 rowAndColumn.AddMatchable(GetItemAt(x, powerup.position.y));
 
         StartCoroutine(score.ResolveMatch(rowAndColumn, MatchType.cross));
+
+        // play powerup sound
+        audioMixer.PlaySound(SoundEffects.powerup);
     }
 
 
@@ -424,6 +442,9 @@ public class MatchableGrid : GridSystem<Matchable>
 
         StartCoroutine(score.ResolveMatch(everythingByType, MatchType.match5));
         StartCoroutine(FillAndScanGrid());
+
+        // play powerup sound
+        audioMixer.PlaySound(SoundEffects.powerup);
     }
 
     // make everything on the grid and resolve it
@@ -443,14 +464,35 @@ public class MatchableGrid : GridSystem<Matchable>
     private int ScanForMoves()
     {
         possibleMoves = new List<Matchable>();
+        Vector2Int[] directions = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
-        // scan through the entire grid
         for (int y = 0; y != Dimensions.y; ++y)
         {
             for (int x = 0; x != Dimensions.x; ++x)
             {
-                if (CheckBounds(x, y) && !IsEmpty(x, y) && CanMove(GetItemAt(x, y)))
-                    possibleMoves.Add(GetItemAt(x, y));
+                if (CheckBounds(x, y) && !IsEmpty(x, y))
+                {
+                    Matchable m = GetItemAt(x, y);
+                    foreach (var dir in directions)
+                    {
+                        Vector2Int neighborPos = m.position + dir;
+                        if (CheckBounds(neighborPos) && !IsEmpty(neighborPos))
+                        {
+                            // Swap tạm thời
+                            SwapItemsAt(m.position, neighborPos);
+                            // Kiểm tra match sau khi swap
+                            bool valid = IsPartOfAMatch(m) || IsPartOfAMatch(GetItemAt(neighborPos));
+                            // Swap lại như cũ
+                            SwapItemsAt(m.position, neighborPos);
+
+                            if (valid)
+                            {
+                                possibleMoves.Add(m);
+                                break; // Không cần kiểm tra hướng khác nữa
+                            }
+                        }
+                    }
+                }
             }
         }
         return possibleMoves.Count;

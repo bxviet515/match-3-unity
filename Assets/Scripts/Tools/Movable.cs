@@ -10,6 +10,13 @@ public class Movable : MonoBehaviour
     protected bool idle = true;
     public bool Idle => idle;
     [SerializeField] private float speed = 1;
+    public float Speed
+    {
+        get
+        {
+            return speed;
+        }
+    }
 
 
     // corountine move from current position to new position
